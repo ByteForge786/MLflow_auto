@@ -1,0 +1,11 @@
+try:
+        # Extract model name and version
+        model_name = model_uri.split(':')[1].split('/')[1]
+        model_version = model_uri.split('/')[2]
+        # Load model using mlflow.pyfunc.load_model
+        model = mlflow.pyfunc.load_model(model_uri=f"models:/{model_name}/{model_version}")
+        mlflow.pyfunc.save_model(path=model_folder, python_model=model)
+        print(f"Model saved in: {model_folder}")
+
+
+          "models:/modelname/version1"
