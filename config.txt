@@ -1,0 +1,17 @@
+# MLflow configuration
+[mlflow]
+tracking_uri = <mlflow_tracking_url>
+username = <mlflow_username>
+password = <mlflow_password>
+
+# AWS configuration
+[aws]
+access_key_id = <aws_access_key_id>
+secret_access_key = <aws_secret_access_key>
+s3_endpoint_url = <mlflow_s3_endpoint_url>
+
+# Model URIs
+[model_uris]
+uri1 = models:/roberta/1
+uri2 = models:/bert/2
+uri3 = models:/gpt/3
