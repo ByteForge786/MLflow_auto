@@ -1,6 +1,7 @@
 import os
 import mlflow.pyfunc
 import requests
+from configparser import ConfigParser
 
 # Path to the config file
 CONFIG_FILE = 'config.txt'
@@ -47,24 +48,21 @@ def load_and_save_model(model_uri, dest_folder):
         print(f"Failed to load and save model from {model_uri}: {e}")
 
 def main():
-    # Load config from text file
-    config = {}
-    with open(CONFIG_FILE, 'r') as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith('#'):
-                key, value = line.split('=', 1)
-                config[key.strip()] = value.strip()
+    # Parse config from text file
+    config = ConfigParser()
+    config.read(CONFIG_FILE)
 
     # Extract MLflow parameters
-    tracking_uri = config.get('tracking_uri')
-    username = config.get('username')
-    password = config.get('password')
+    mlflow_config = config['mlflow']
+    tracking_uri = mlflow_config.get('tracking_uri')
+    username = mlflow_config.get('username')
+    password = mlflow_config.get('password')
 
     # Extract AWS parameters
-    access_key_id = config.get('access_key_id')
-    secret_access_key = config.get('secret_access_key')
-    s3_endpoint_url = config.get('s3_endpoint_url')
+    aws_config = config['aws']
+    access_key_id = aws_config.get('access_key_id')
+    secret_access_key = aws_config.get('secret_access_key')
+    s3_endpoint_url = aws_config.get('s3_endpoint_url')
 
     # Set AWS environment variables
     configure_aws(access_key_id, secret_access_key, s3_endpoint_url)
@@ -73,8 +71,8 @@ def main():
     if not check_mlflow_alive(tracking_uri, username, password):
         return
 
-    # Load model URIs
-    model_uris = [config[key] for key in config if key.startswith('uri')]
+    # Extract model URIs
+    model_uris = [value for key, value in config['model_uris'].items()]
     if not model_uris:
         print("No model URIs found in the config file.")
         return
