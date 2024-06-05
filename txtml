@@ -1,0 +1,88 @@
+import os
+import mlflow.pyfunc
+import requests
+
+# Path to the config file
+CONFIG_FILE = 'config.txt'
+# Parent folder where models will be saved
+MODEL_PARENT_FOLDER = 'models'
+
+def check_mlflow_alive(tracking_uri, username, password):
+    try:
+        response = requests.get(tracking_uri, auth=(username, password))
+        if response.status_code == 200:
+            print("MLflow is running and accessible.")
+            return True
+        else:
+            print(f"MLflow is not accessible. Status code: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"Failed to connect to MLflow: {e}")
+        return False
+
+def configure_aws(access_key_id, secret_access_key, s3_endpoint_url):
+    os.environ['AWS_ACCESS_KEY_ID'] = access_key_id
+    os.environ['AWS_SECRET_ACCESS_KEY'] = secret_access_key
+    os.environ['MLFLOW_S3_ENDPOINT_URL'] = s3_endpoint_url
+
+def load_and_save_model(model_uri, dest_folder):
+    try:
+        # Extract model name from the URI
+        model_name = model_uri.split('/')[-1]
+        # Replace any characters in the model name that might cause path issues
+        model_folder_name = model_name.replace(':', '_').replace('/', '_')
+        # Construct the model folder path
+        model_folder = os.path.join(dest_folder, model_folder_name)
+
+        # Ensure the destination folder exists
+        if not os.path.exists(model_folder):
+            os.makedirs(model_folder)
+
+        # Load and save the model
+        model = mlflow.pyfunc.load_model(model_uri)
+        mlflow.pyfunc.save_model(path=model_folder, python_model=model)
+
+        print(f"Model saved in: {model_folder}")
+    except Exception as e:
+        print(f"Failed to load and save model from {model_uri}: {e}")
+
+def main():
+    # Load config from text file
+    config = {}
+    with open(CONFIG_FILE, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#'):
+                key, value = line.split('=', 1)
+                config[key.strip()] = value.strip()
+
+    # Extract MLflow parameters
+    tracking_uri = config.get('tracking_uri')
+    username = config.get('username')
+    password = config.get('password')
+
+    # Extract AWS parameters
+    access_key_id = config.get('access_key_id')
+    secret_access_key = config.get('secret_access_key')
+    s3_endpoint_url = config.get('s3_endpoint_url')
+
+    # Set AWS environment variables
+    configure_aws(access_key_id, secret_access_key, s3_endpoint_url)
+
+    # Check if MLflow is alive
+    if not check_mlflow_alive(tracking_uri, username, password):
+        return
+
+    # Load model URIs
+    model_uris = [config[key] for key in config if key.startswith('uri')]
+    if not model_uris:
+        print("No model URIs found in the config file.")
+        return
+
+    # Iterate over each model URI
+    for model_uri in model_uris:
+        # Load and save the model
+        load_and_save_model(model_uri, MODEL_PARENT_FOLDER)
+
+if __name__ == "__main__":
+    main()
